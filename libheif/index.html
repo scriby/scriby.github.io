@@ -314,8 +314,9 @@ a {
 
         fetch('libheif.wasm')
             .then((res) => res.arrayBuffer())
-            .then((wasmBinary) => {
-                var demo = new HeifDemo(libheif({ wasmBinary: wasmBinary }));
+            .then((wasmBinary) => libheif({ wasmBinary: wasmBinary }))
+            .then((wasm) => {
+        var demo = new HeifDemo(wasm);
 
 		console.log("Using libheif", demo.libheif.heif_get_version());
 
