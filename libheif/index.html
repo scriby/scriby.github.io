@@ -33,7 +33,9 @@ a {
 <body>
 <h1>libheif decoder demo</h1>
 <a href="https://github.com/strukturag/libheif"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/52760788cde945287fbb584134c4cbc2bc36f904/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f77686974655f6666666666662e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_white_ffffff.png"></a>
-<div><small>Copyright &copy; 2017-2018 by <a href="http://www.struktur.de">struktur AG</a></small></div>
+<div><small>Copyright &copy; 2017-2020 by <a href="http://www.struktur.de">struktur AG</a></small></div>
+<div><small>Copyright &copy; 2017-2024 by <a href="https://dirk-farin.net">Dirk Farin</a></small></div>
+<div><br>This page is using <a href="https://github.com/strukturag/libheif">libheif</a> v1.19.5 and <a href="https://github.com/strukturag/libde265">libde265</a> v1.0.15, compiled to JS+WASM.</div>
 <div id="form" class="hidden">
     <div>
         Select HEIF image file to display:
@@ -56,12 +58,8 @@ a {
     <canvas id="canvas"></canvas>
 </div>
 <div id="error-format" class="hidden">
-    The selected file is not a valid HEIF file or the specific format is not
-    supported yet.<br>
-    If you selected is a valid HEIF file and still see this error, please send
-    the file to
-    <a target="_blank" href="mailto:opensource@struktur.de">opensource@struktur.de</a>
-    so we can improve the library.
+    The selected file is not a valid HEIF file or the specific format is not supported yet.<br>
+    If you selected a valid HEIF file and still see this error, please file an issue on github.
 </div>
 <script>
 (function() {
@@ -191,8 +189,6 @@ a {
         }.bind(this));
         this.drawer = new CanvasDrawer(canvas);
         this.decoder = new libheif.HeifDecoder();
-
-        console.log("Using libheif", libheif.heif_get_version());
         saveSupported = this.canvas.toBlob &&
             ((URL && URL.createObjectURL) || navigator.msSaveOrOpenBlob);
         if (saveSupported) {
@@ -309,52 +305,59 @@ a {
     };
 
     window.onload = function() {
-        hide("loading");
-        if (typeof libheif === "undefined") {
+	hide("loading");
+
+	if (typeof libheif === "undefined") {
             alert("libheif could not be loaded, please check your browser console for details.");
             return;
         }
 
-        var demo = new HeifDemo(libheif());
+        fetch('libheif.wasm')
+            .then((res) => res.arrayBuffer())
+            .then((wasmBinary) => {
+                var demo = new HeifDemo(libheif({ wasmBinary: wasmBinary }));
 
-        show("form");
+		console.log("Using libheif", demo.libheif.heif_get_version());
 
-        document.getElementById("file").addEventListener("change", function(event) {
-            var files = event.target.files;
-            if (!files || !files.length) {
-                return;
-            }
+		show("form");
 
-            hide("container");
-            hide("error-format");
-            hide("decoding");
-            show("loading");
-            demo.reset();
-            var file = files[0];
-            var reader = new FileReader();
-            reader.onload = (function(theFile) {
-                return function(e) {
-                    hide("container");
-                    hide("save-container");
-                    setTimeout(function() {
-                        var buffer = e.target.result;
-                        if (!demo.loadBuffer(buffer, theFile.name)) {
-                            hide("container");
-                            show("error-format");
-                        }
-                    }, 1);
-                };
-            })(file);
-            reader.readAsArrayBuffer(file);
-        });
+		document.getElementById("file").addEventListener("change", function(event) {
+		    var files = event.target.files;
+		    if (!files || !files.length) {
+			return;
+		    }
 
-        document.getElementById("save").addEventListener("click", function(event) {
-            demo.saveImage();
-        });
+		    hide("container");
+		    hide("error-format");
+		    hide("decoding");
+		    show("loading");
+		    demo.reset();
+		    var file = files[0];
+		    var reader = new FileReader();
+		    reader.onload = (function(theFile) {
+			return function(e) {
+			    hide("container");
+			    hide("save-container");
+			    setTimeout(function() {
+				var buffer = e.target.result;
+				if (!demo.loadBuffer(buffer, theFile.name)) {
+				    hide("container");
+				    show("error-format");
+				}
+			    }, 1);
+			};
+		    })(file);
+		    reader.readAsArrayBuffer(file);
+		});
 
-        // Start with example image.
-        var url = "example.heic";
-        demo.loadUrl(url);
+		document.getElementById("save").addEventListener("click", function(event) {
+		    demo.saveImage();
+		});
+
+		// Start with example image.
+		var url = "example.heic";
+		demo.loadUrl(url);
+	    });
     };
 
 }).call();
